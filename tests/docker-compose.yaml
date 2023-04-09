@@ -1,0 +1,30 @@
+version: '3'
+services:
+  es:
+    image: elasticsearch:7.9.1
+    restart: always
+    env_file:
+      - functional/.es_env.example
+
+
+  redis:
+    image: redis
+    restart: always
+    env_file:
+      - functional/.redis_env.example
+
+
+  fastapi:
+    restart: always
+    build:
+      context: ..
+    env_file:
+      - functional/.env.test
+    depends_on:
+      - redis
+      - es
+
+  tests:
+    build: .
+    env_file:
+      - functional/.env.test

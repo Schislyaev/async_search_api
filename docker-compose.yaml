@@ -1,0 +1,53 @@
+version: '3'
+services:
+  db:
+    image: postgres:13-alpine
+    env_file:
+      - ETL/.db_env.example
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./ETL/dumps.sql:/docker-entrypoint-initdb.d/dumps.sql
+
+  es:
+    image: elasticsearch:7.9.1
+    env_file:
+      - ETL/.es_env.example
+
+  redis:
+    image: redis
+    env_file:
+      - ETL/.redis_env.example
+
+  fastapi:
+    restart: always
+    build:
+      context: .
+    env_file:
+      - .env.example
+    depends_on:
+      - redis
+      - es
+
+  etl:
+    build:
+      context: ETL/
+    env_file:
+      - ETL/postgres_to_es/.env.example
+    depends_on:
+      - db
+      - es
+      - redis
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d/:ro
+    depends_on:
+      - fastapi
+    ports:
+      - "8000:8000"
+
+
+volumes:
+  db_data:
